@@ -19,6 +19,9 @@
   let sortBy = "value";
   let openTicker = null;
   let refreshing = false;
+  let update = null;          // latest release info when newer than this version
+  let lastUpdateCheck = 0;
+  let manualCheck = false;
 
   // ---------- Formatting ----------
   const money = (v, signed) => {
@@ -269,8 +272,55 @@
     pull.style.opacity = "0";
   }
 
+  // ---------- Updates ----------
+  function checkUpdate(manual) {
+    if (!Native || !Native.checkUpdate) return;
+    manualCheck = !!manual;
+    lastUpdateCheck = Date.now();
+    if (manual) $("btnCheck").textContent = "Checking…";
+    Native.checkUpdate();
+  }
+  function showUpdate() {
+    const box = $("update");
+    box.hidden = !update;
+    if (!update) return;
+    $("updateSub").textContent = `Version ${update.version} is ready. Tap Install, then confirm.`;
+    const b = $("btnUpdate");
+    b.disabled = false;
+    b.textContent = "Install";
+  }
+  function installUpdate() {
+    if (!update) return;
+    haptic("confirm");
+    const b = $("btnUpdate");
+    b.disabled = true;
+    b.textContent = "Downloading…";
+    $("updateSub").textContent = "Android will ask you to confirm the install.";
+    Native.installUpdate(update.apk);
+    // If Android's screen was cancelled, let them try again.
+    setTimeout(() => { if (b.disabled) { b.disabled = false; b.textContent = "Install"; } }, 20000);
+  }
+
   // ---------- Called by Android ----------
   window.app = {
+    onUpdateChecked(json) {
+      let r = {};
+      try { r = JSON.parse(json); } catch (e) { /* ignore */ }
+      update = r.available ? r : null;
+      showUpdate();
+      if (manualCheck) {
+        $("btnCheck").textContent = r.error ? "Couldn't check" : r.available ? `Version ${r.version} available` : "You're up to date";
+        setTimeout(() => { $("btnCheck").textContent = "Check for updates"; }, 3000);
+        if (r.available) closeSettings();
+      }
+      manualCheck = false;
+    },
+    onUpdateFailed(msg) {
+      const b = $("btnUpdate");
+      b.disabled = false;
+      b.textContent = "Try again";
+      $("updateSub").textContent = msg || "The update didn't install.";
+    },
     onRefreshed(json) {
       refreshing = false;
       $("btnRefresh").classList.remove("spin");
@@ -282,6 +332,8 @@
       load();
       // Refresh when coming back to the app if the last update is over 2 minutes old.
       if (state.url && Date.now() - (state.fetchedMs || 0) > 2 * 60000) refresh();
+      // Look for a new version at most every 6 hours.
+      if (Date.now() - lastUpdateCheck > 6 * 3600000) checkUpdate(false);
     },
     /** Android back button: close Settings first. Returns true if it handled it. */
     back() {
@@ -303,6 +355,8 @@
   $("btnSettings").addEventListener("click", openSettings);
   $("btnClose").addEventListener("click", closeSettings);
   $("btnSave").addEventListener("click", saveSettings);
+  $("btnUpdate").addEventListener("click", installUpdate);
+  $("btnCheck").addEventListener("click", () => { haptic("tap"); checkUpdate(true); });
   $("btnHide").addEventListener("click", () => {
     state.hideValues = !state.hideValues;
     if (Native) Native.saveSettings(state.url || "", state.widgetHoldings !== false, state.hideValues);

@@ -35,9 +35,13 @@ Keep the file in your password manager.
 
 ## Installing and updating
 
-1. Each new number in `VERSION` makes GitHub build a signed APK under **Releases**.
-2. On the phone, open the latest release (GitHub app or Chrome, signed in) and download the `.apk`.
-3. Open it and allow installing from that app if asked. Updates install over the top and keep your settings.
+Each new number in `VERSION` makes GitHub build a signed APK under **Releases** (the repo is
+public so the app can download updates without signing in; no personal data is in the code).
+
+- **Updates:** the app checks Releases when opened (at most every 6 hours, or via Settings →
+  Check for updates) and shows **Update available**. Tap **Install**, then confirm Android's prompt.
+  The first time, Android asks you to allow Portfolio to install apps. Updates keep your settings.
+- **First install:** download the `.apk` from the latest release on the phone and open it.
 
 ## Code
 

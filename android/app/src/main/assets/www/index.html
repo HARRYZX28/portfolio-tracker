@@ -31,6 +31,14 @@
       </div>
     </header>
 
+    <div id="update" class="card update" hidden>
+      <div class="update-text">
+        <div class="update-title">Update available</div>
+        <div id="updateSub" class="muted small"></div>
+      </div>
+      <button id="btnUpdate" class="update-btn">Install</button>
+    </div>
+
     <p id="notice" class="notice" hidden></p>
 
     <section id="content"></section>
@@ -69,7 +77,7 @@
           </ol>
           <p class="muted small">Prices are delayed up to about 20 minutes. Add or sell holdings by editing the Sheet; the app picks it up on the next refresh.</p>
         </details>
-        <p id="version" class="muted tiny center"></p>
+        <p class="center version-row"><span id="version" class="muted tiny"></span> · <button id="btnCheck" class="link-btn tiny">Check for updates</button></p>
       </div>
     </div>
   </div>

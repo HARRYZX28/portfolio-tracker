@@ -216,3 +216,16 @@ textarea:focus { border-color: var(--primary); }
 }
 .pull-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--pos); border-top-color: transparent; }
 .pull.go .pull-dot { animation: spin .8s linear infinite; }
+
+/* ---------- Update banner ---------- */
+.update { display: flex; align-items: center; gap: 12px; padding: 13px 14px 13px 16px; margin-bottom: 14px; border-color: oklch(0.82 0.19 165 / 0.35); }
+.update[hidden] { display: none; }
+.update-text { flex: 1; min-width: 0; }
+.update-title { font-size: 14px; font-weight: 600; color: var(--pos); }
+.update-btn {
+  flex: none; padding: 9px 16px; border-radius: 12px; font-weight: 600; font-size: 14px;
+  border: 1px solid oklch(0.82 0.19 165 / 0.6); background: oklch(0.82 0.19 165 / 0.16); color: var(--pos);
+}
+.update-btn:disabled { opacity: .6; }
+.version-row { margin: 18px 0 0; }
+.link-btn { border: 0; background: none; padding: 0; color: var(--pos); text-decoration: underline; text-underline-offset: 2px; }

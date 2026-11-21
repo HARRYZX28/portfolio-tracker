@@ -31,11 +31,19 @@ public class MainActivity extends Activity {
     private final Handler main = new Handler(Looper.getMainLooper());
     private int insetTop, insetBottom;
     private boolean pageReady;
+    private static java.lang.ref.WeakReference<MainActivity> current = new java.lang.ref.WeakReference<>(null);
+
+    /** Called when Android reports an update install failed or was cancelled. */
+    static void notifyUpdateFailed(String message) {
+        MainActivity a = current.get();
+        if (a != null) a.callJs("onUpdateFailed", message);
+    }
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        current = new java.lang.ref.WeakReference<>(this);
         Window window = getWindow();
         // Edge to edge: the background runs behind the status and navigation bars.
         if (Build.VERSION.SDK_INT >= 30) {
@@ -158,6 +166,21 @@ public class MainActivity extends Activity {
                     : HapticFeedbackConstants.CONTEXT_CLICK;
                 web.performHapticFeedback(type);
             });
+        }
+
+        /** Checks GitHub for a newer version, then calls app.onUpdateChecked(json). */
+        @JavascriptInterface
+        public void checkUpdate() {
+            new Thread(() -> callJs("onUpdateChecked", Updater.check(MainActivity.this).toString())).start();
+        }
+
+        /** Downloads the update and opens Android's install screen; calls app.onUpdateFailed(msg) on failure. */
+        @JavascriptInterface
+        public void installUpdate(String apkUrl) {
+            new Thread(() -> {
+                String error = Updater.install(MainActivity.this, apkUrl);
+                if (error != null) callJs("onUpdateFailed", error);
+            }).start();
         }
 
         @JavascriptInterface
