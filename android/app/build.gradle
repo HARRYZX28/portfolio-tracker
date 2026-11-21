@@ -1,0 +1,52 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = "app.harry.portfolio"
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId "app.harry.portfolio"
+        minSdk 26
+        targetSdk 36
+        // Set by the GitHub build from the VERSION file (see .github/workflows/android.yml).
+        versionCode Integer.parseInt((project.findProperty("appVersionCode") ?: "1").toString())
+        versionName((project.findProperty("appVersionName") ?: "0.0.0-dev").toString())
+    }
+
+    signingConfigs {
+        release {
+            // The signing key lives only in GitHub secrets, never in the repo.
+            // Every update must be signed with the same key or the phone refuses to install it.
+            def keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (keystorePath) {
+                storeFile file(keystorePath)
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias "portfolio"
+                keyPassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            if (System.getenv("ANDROID_KEYSTORE_PATH")) signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
+    }
+}
+
+dependencies {
+    testImplementation "junit:junit:4.13.2"
+}

@@ -1,0 +1,46 @@
+# Portfolio
+
+Harry's Android portfolio tracker with a home-screen widget, in the same style as the Budget app.
+
+## How it works
+
+- **Holdings live in a Google Sheet** (tab `Holdings`): Ticker, Name, Units, Avg cost, Price, Prev close.
+  Price and Prev close come from `GOOGLEFINANCE`, which Google keeps up to date itself (delayed about 20 minutes).
+- The Sheet is **published to the web as CSV**. The app and widget read that link directly.
+  **No Google Apps Script runs**, so this uses none of the 90 minutes a day of trigger time.
+- The app does the maths (`PortfolioCore.java`): value, today's change, total gain, allocation.
+  The widget uses the same code, so the two always agree.
+- The widget refreshes about every 30 minutes (Android's minimum) and whenever the app is open.
+  Tap it to cycle cards: Portfolio, Today, Total gain, then each holding. Tap ↗ to open the app.
+
+## Changing holdings
+
+Edit the Sheet (add a row, change Units, delete a row). Rows with 0 units are ignored.
+Crypto works with tickers like `CURRENCY:BTCAUD` (no Prev close, so no day change).
+
+## One-time GitHub setup
+
+Repo **Settings → Secrets and variables → Actions → New repository secret**, add both values from
+`github-secrets.txt` exactly as written:
+
+| Name | Value |
+|---|---|
+| `ANDROID_KEYSTORE_PASSWORD` | The line under `ANDROID_KEYSTORE_PASSWORD` |
+| `ANDROID_KEYSTORE_BASE64` | The long line under `ANDROID_KEYSTORE_BASE64` |
+
+Every update must be signed with this key, or the phone won't install it over the old version.
+Keep the file in your password manager.
+
+## Installing and updating
+
+1. Each new number in `VERSION` makes GitHub build a signed APK under **Releases**.
+2. On the phone, open the latest release (GitHub app or Chrome, signed in) and download the `.apk`.
+3. Open it and allow installing from that app if asked. Updates install over the top and keep your settings.
+
+## Code
+
+- `android/app/src/main/java/app/harry/portfolio/` – maths (`PortfolioCore`), Sheet download and settings
+  (`PortfolioStore`), widget (`PortfolioWidget`), app screen host (`MainActivity`).
+- `android/app/src/main/assets/www/` – the app screen (plain HTML, CSS and JavaScript). Opening
+  `index.html` in a desktop browser shows a preview with sample holdings.
+- `.github/workflows/android.yml` – tests and builds the APK.

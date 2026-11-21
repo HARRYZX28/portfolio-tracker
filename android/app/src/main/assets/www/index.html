@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="color-scheme" content="dark" />
+  <title>Portfolio</title>
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="app-glow" aria-hidden="true"></div>
+  <div class="status-scrim" aria-hidden="true"></div>
+
+  <div id="pull" class="pull" aria-hidden="true"><div class="pull-dot"></div></div>
+
+  <main id="main">
+    <header class="top">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">
+          <svg viewBox="0 0 32 32"><defs><linearGradient id="lg" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#2EE6A6"/><stop offset="1" stop-color="#5EE7F0"/></linearGradient></defs><path d="M6 22 L12 15 L17 18 L23 10 L27 7" fill="none" stroke="url(#lg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="27" cy="7" r="2.2" fill="#EFF7F7"/></svg>
+        </div>
+        <div>
+          <h1>Portfolio</h1>
+          <p id="updated" class="muted small">&nbsp;</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnHide" class="icon-btn" aria-label="Hide amounts"></button>
+        <button id="btnRefresh" class="icon-btn" aria-label="Refresh"></button>
+        <button id="btnSettings" class="icon-btn" aria-label="Settings"></button>
+      </div>
+    </header>
+
+    <p id="notice" class="notice" hidden></p>
+
+    <section id="content"></section>
+  </main>
+
+  <div id="sheet" class="sheet-wrap" hidden>
+    <div class="sheet" role="dialog" aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <h3 id="sheetTitle">Settings</h3>
+        <button id="btnClose" class="icon-btn plain" aria-label="Close"></button>
+      </div>
+      <div class="sheet-body">
+        <label class="field">
+          <span>Sheet link (published CSV)</span>
+          <textarea id="inUrl" rows="3" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="https://docs.google.com/spreadsheets/d/e/…/pub?gid=0&amp;single=true&amp;output=csv"></textarea>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="inWidgetHoldings" />
+          <span class="track"><span class="knob"></span></span>
+          <span class="toggle-text">Show each holding on the widget<small>Tap the widget to cycle through them</small></span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="inHide" />
+          <span class="track"><span class="knob"></span></span>
+          <span class="toggle-text">Hide dollar amounts<small>Shows percentages only, here and on the widget</small></span>
+        </label>
+        <button id="btnSave" class="primary-btn">Save</button>
+        <details class="help">
+          <summary>How to get the Sheet link</summary>
+          <ol>
+            <li>Holdings tab, row 1: <b>Ticker, Name, Units, Avg cost, Price, Prev close</b></li>
+            <li>Price: <code>=GOOGLEFINANCE(A2,"price")</code></li>
+            <li>Prev close: <code>=GOOGLEFINANCE(A2,"closeyest")</code></li>
+            <li>File → Share → Publish to web → <b>Holdings</b> → <b>Comma-separated values (.csv)</b> → Publish</li>
+            <li>Copy the link and paste it above</li>
+          </ol>
+          <p class="muted small">Prices are delayed up to about 20 minutes. Add or sell holdings by editing the Sheet; the app picks it up on the next refresh.</p>
+        </details>
+        <p id="version" class="muted tiny center"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

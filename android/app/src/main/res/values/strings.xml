@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Portfolio</string>
+    <string name="widget_empty">Open Portfolio to set up this widget</string>
+    <string name="widget_description">Portfolio value, today\'s change, total gain and each holding. Tap to switch.</string>
+    <string name="widget_open_app">Open Portfolio</string>
+</resources>
