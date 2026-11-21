@@ -56,6 +56,22 @@ public class PortfolioCoreTest {
     }
 
     @Test
+    public void monthChangeFromMonthAgoColumn() throws Exception {
+        PortfolioCore.Summary s = PortfolioCore.fromCsv(
+            "Ticker,Name,Units,Avg cost,Price,Prev close,Month ago,https://link\n"
+            + "ASX:QAN,Qantas,10,9.66,9.64,9.68,8.45\n"
+            + "CURRENCY:BTCAUD,Bitcoin,1,1,2,,\n");
+        assertEquals(10 * (9.64 - 8.45), s.monthChange, 1e-9);
+        assertEquals((9.64 - 8.45) / 8.45, s.monthPct, 1e-9);
+        assertNull(s.holdings.get(1).monthPct); // crypto: no month-ago price
+    }
+
+    @Test
+    public void noMonthColumnMeansNoMonthChange() throws Exception {
+        assertNull(PortfolioCore.fromCsv(CSV).monthChange);
+    }
+
+    @Test
     public void emptySheetIsFine() throws Exception {
         PortfolioCore.Summary s = PortfolioCore.fromCsv("Ticker,Units,Price\n");
         assertTrue(s.holdings.isEmpty());

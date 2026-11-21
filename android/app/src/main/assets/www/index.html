@@ -69,9 +69,10 @@
         <details class="help">
           <summary>How to get the Sheet link</summary>
           <ol>
-            <li>Holdings tab, row 1: <b>Ticker, Name, Units, Avg cost, Price, Prev close</b></li>
+            <li>Holdings tab, row 1: <b>Ticker, Name, Units, Avg cost, Price, Prev close, Month ago</b></li>
             <li>Price: <code>=GOOGLEFINANCE(A2,"price")</code></li>
             <li>Prev close: <code>=GOOGLEFINANCE(A2,"closeyest")</code></li>
+            <li>Month ago: <code>=LET(d,GOOGLEFINANCE(A2,"close",TODAY()-36,TODAY()-30),INDEX(d,ROWS(d),2))</code></li>
             <li>File → Share → Publish to web → <b>Holdings</b> → <b>Comma-separated values (.csv)</b> → Publish</li>
             <li>Copy the link and paste it above</li>
           </ol>

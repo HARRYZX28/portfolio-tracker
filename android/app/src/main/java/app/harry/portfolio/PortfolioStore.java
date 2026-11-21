@@ -131,12 +131,13 @@ final class PortfolioStore {
     }
 
     // ---- Value history (for the widget chart) -------------------------------------------
-    // Saved on the phone as "time:value;time:value;…". One point per 20 minutes at most,
-    // kept for 90 days. The chart builds up as the app and widget refresh.
+    // Saved on the phone as "time:value;time:value;…". One point per 20 minutes for the last
+    // 2 days, then thinned to one an hour up to 31 days old, then one a day (kept for good).
+    // The chart builds up as the app and widget refresh.
 
     private static final String KEY_HISTORY = "history";
     private static final long MIN_GAP_MS = 20 * 60 * 1000L;
-    private static final long KEEP_MS = 90L * 24 * 60 * 60 * 1000;
+    private static final long HOUR = 60 * 60 * 1000L, DAY = 24 * HOUR;
 
     private static void recordHistory(Context c, PortfolioCore.Summary s, long now) {
         if (s.value <= 0 || s.missingPrices > 0) return;
@@ -151,8 +152,20 @@ final class PortfolioStore {
         }
         points.add(new double[] { now, s.value });
         StringBuilder out = new StringBuilder();
-        for (double[] p : points) {
-            if (now - p[0] > KEEP_MS) continue;
+        long lastBucket = Long.MIN_VALUE;
+        for (int i = 0; i < points.size(); i++) {
+            double[] p = points.get(i);
+            long age = now - (long) p[0];
+            long size = age > 31 * DAY ? DAY : age > 2 * DAY ? HOUR : 0;
+            if (size > 0) {
+                // Keep only the last point in each hour/day bucket.
+                long bucket = (long) p[0] / size;
+                boolean nextSame = i + 1 < points.size() && (long) points.get(i + 1)[0] / size == bucket
+                    && (now - (long) points.get(i + 1)[0]) > 2 * DAY;
+                if (nextSame) continue;
+                if (bucket == lastBucket) continue;
+                lastBucket = bucket;
+            }
             if (out.length() > 0) out.append(';');
             out.append((long) p[0]).append(':').append(Math.round(p[1] * 100) / 100.0);
         }
@@ -203,6 +216,8 @@ final class PortfolioStore {
         put(o, "gainPct", s.gainPct);
         put(o, "dayChange", s.dayChange);
         put(o, "dayPct", s.dayPct);
+        put(o, "monthChange", s.monthChange);
+        put(o, "monthPct", s.monthPct);
         o.put("missingPrices", s.missingPrices);
         JSONArray list = new JSONArray();
         for (PortfolioCore.Holding h : s.holdings) {
@@ -220,6 +235,9 @@ final class PortfolioStore {
             put(j, "gainPct", h.gainPct);
             put(j, "dayChange", h.dayChange);
             put(j, "dayPct", h.dayPct);
+            put(j, "monthAgo", h.monthAgo);
+            put(j, "monthChange", h.monthChange);
+            put(j, "monthPct", h.monthPct);
             j.put("weight", h.weight);
             list.put(j);
         }

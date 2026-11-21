@@ -4,16 +4,17 @@ Harry's Android portfolio tracker with a home-screen widget, in the same style a
 
 ## How it works
 
-- **Holdings live in a Google Sheet** (tab `Holdings`): Ticker, Name, Units, Avg cost, Price, Prev close.
-  Price and Prev close come from `GOOGLEFINANCE`, which Google keeps up to date itself (delayed about 20 minutes).
+- **Holdings live in a Google Sheet** (tab `Holdings`): Ticker, Name, Units, Avg cost, Price, Prev close,
+  Month ago. Price, Prev close and Month ago (close about 30 days ago) come from `GOOGLEFINANCE`, which Google keeps up to date itself (delayed about 20 minutes).
 - The Sheet is **published to the web as CSV**. The app and widget read that link directly.
   **No Google Apps Script runs**, so this uses none of the 90 minutes a day of trigger time.
 - The app does the maths (`PortfolioCore.java`): value, today's change, total gain, allocation.
   The widget uses the same code, so the two always agree.
 - The widget refreshes about every 30 minutes (Android's minimum) and whenever the app is open.
-  Its layout follows its size: 1 row shows the total and today's change; 2 rows add total gain,
-  a value chart and the top holding; 3+ rows show up to 4 holdings. Tap it to open the app.
-  The chart builds up on the phone from each refresh (kept for 90 days).
+  Its layout follows its size: 1 row shows the total and the change; 2 rows add the gain line,
+  a value chart and the top holding; 3+ rows show up to 4 holdings.
+  **Tap it to switch period: Today → 1 month → All time** (chip, gain line, holdings and chart follow).
+  Tap ↗ to open the app. The chart builds up on the phone from each refresh (thinned with age, kept for good).
 
 ## Changing holdings
 

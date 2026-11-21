@@ -10,7 +10,7 @@ import java.util.Locale;
  * its own. Both the app screen and the home-screen widget use this, so they always agree.
  *
  * Input is the "Holdings" tab of the Google Sheet, published as CSV, with headings:
- *   Ticker | Name | Units | Avg cost | Price | Prev close
+ *   Ticker | Name | Units | Avg cost | Price | Prev close | Month ago (optional)
  * Columns are found by heading, so their order (and any extra columns) doesn't matter.
  */
 public final class PortfolioCore {
@@ -24,6 +24,7 @@ public final class PortfolioCore {
         public Double avgCost;    // per unit; null if blank
         public Double price;      // null while GOOGLEFINANCE is loading or errors
         public Double prevClose;  // null for crypto / errors
+        public Double monthAgo;   // closing price about 30 days ago; null if not in the Sheet
 
         // Worked out by compute()
         public double value;
@@ -32,6 +33,8 @@ public final class PortfolioCore {
         public Double gainPct;
         public Double dayChange;
         public Double dayPct;
+        public Double monthChange;
+        public Double monthPct;
         public double weight;
 
         /** "ASX:VAS" shows as "VAS"; "CURRENCY:BTCAUD" as "BTC". */
@@ -55,6 +58,8 @@ public final class PortfolioCore {
         public Double gainPct;
         public Double dayChange;  // null if no holding has a prev close
         public Double dayPct;
+        public Double monthChange; // null if the Sheet has no Month ago column (or no values)
+        public Double monthPct;
         public int missingPrices; // rows whose price couldn't be read (left out of totals)
     }
 
@@ -83,6 +88,7 @@ public final class PortfolioCore {
         int avgCost = find(header, "avg cost", "average cost", "cost", "avg price", "buy price");
         int price = find(header, "price", "current price", "last price");
         int prev = find(header, "prev close", "previous close", "close yest", "closeyest", "prev");
+        int month = find(header, "month ago", "1 month ago", "1m ago", "month");
         if (ticker < 0 || units < 0 || price < 0) {
             throw new FormatException("Couldn't find the Ticker, Units and Price headings in row 1 of the Holdings tab.");
         }
@@ -100,6 +106,8 @@ public final class PortfolioCore {
             h.avgCost = avgCost >= 0 ? number(cell(row, avgCost)) : null;
             h.price = number(cell(row, price));
             h.prevClose = prev >= 0 ? number(cell(row, prev)) : null;
+            h.monthAgo = month >= 0 ? number(cell(row, month)) : null;
+            if (h.monthAgo != null && h.monthAgo <= 0) h.monthAgo = null;
             if (h.price != null && h.price <= 0) h.price = null;
             if (h.prevClose != null && h.prevClose <= 0) h.prevClose = null;
             out.add(h);
@@ -109,8 +117,8 @@ public final class PortfolioCore {
 
     public static Summary compute(List<Holding> holdings) {
         Summary s = new Summary();
-        double cost = 0, gainBase = 0, gain = 0, day = 0, dayBase = 0;
-        boolean anyCost = false, anyDay = false;
+        double cost = 0, gainBase = 0, gain = 0, day = 0, dayBase = 0, mon = 0, monBase = 0;
+        boolean anyCost = false, anyDay = false, anyMonth = false;
 
         for (Holding h : holdings) {
             s.holdings.add(h);
@@ -138,6 +146,13 @@ public final class PortfolioCore {
                 dayBase += h.units * h.prevClose;
                 anyDay = true;
             }
+            if (h.monthAgo != null) {
+                h.monthChange = h.units * (h.price - h.monthAgo);
+                h.monthPct = (h.price - h.monthAgo) / h.monthAgo;
+                mon += h.monthChange;
+                monBase += h.units * h.monthAgo;
+                anyMonth = true;
+            }
         }
         for (Holding h : s.holdings) h.weight = s.value > 0 ? h.value / s.value : 0;
 
@@ -149,6 +164,10 @@ public final class PortfolioCore {
         if (anyDay) {
             s.dayChange = day;
             s.dayPct = dayBase != 0 ? day / dayBase : null;
+        }
+        if (anyMonth) {
+            s.monthChange = mon;
+            s.monthPct = monBase != 0 ? mon / monBase : null;
         }
         // Biggest holdings first.
         Collections.sort(s.holdings, (a, b) -> Double.compare(b.value, a.value));

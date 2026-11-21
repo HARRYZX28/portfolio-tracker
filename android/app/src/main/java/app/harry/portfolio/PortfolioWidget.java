@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -23,6 +24,7 @@ import android.text.style.ForegroundColorSpan;
 import android.util.SizeF;
 import android.view.View;
 import android.widget.RemoteViews;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -34,10 +36,16 @@ import java.util.Map;
  *  - 1 row:   ticker tile, total value, today's change
  *  - 2 rows:  total, today, total gain, a value chart and the top holding
  *  - 3+ rows: the same with up to 4 holdings
- * Tap anywhere to open the app. Android refreshes it about every 30 minutes by reading
- * the published Sheet, and the app refreshes it whenever it's open.
+ * Tap the widget to switch period: Today → 1 month → All time (the chip, gain line,
+ * holding changes and chart all follow it). Tap ↗ to open the app. Android refreshes it
+ * about every 30 minutes by reading the published Sheet, and the app whenever it's open.
  */
 public class PortfolioWidget extends AppWidgetProvider {
+
+    static final String ACTION_NEXT_PERIOD = "app.harry.portfolio.widget.NEXT_PERIOD";
+    private static final int TODAY = 0, MONTH = 1, ALL = 2;
+    private static final String[] PERIOD_NAMES = { "Today", "1 month", "All time" };
+    private static final String[] PERIOD_TAGS = { "TODAY", "1 MONTH", "ALL TIME" };
 
     static final int GREEN = Color.parseColor("#2EE6A6");
     static final int RED = Color.parseColor("#F87171");
@@ -69,6 +77,34 @@ public class PortfolioWidget extends AppWidgetProvider {
     }
 
     @Override
+    public void onReceive(Context context, Intent intent) {
+        if (ACTION_NEXT_PERIOD.equals(intent.getAction())) {
+            int id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+            if (id != AppWidgetManager.INVALID_APPWIDGET_ID) {
+                widgetPrefs(context).edit().putInt("period_" + id, (period(context, id) + 1) % 3).apply();
+                safeDraw(context, AppWidgetManager.getInstance(context), id);
+            }
+            return;
+        }
+        super.onReceive(context, intent);
+    }
+
+    @Override
+    public void onDeleted(Context context, int[] ids) {
+        SharedPreferences.Editor e = widgetPrefs(context).edit();
+        for (int id : ids) e.remove("period_" + id);
+        e.apply();
+    }
+
+    private static SharedPreferences widgetPrefs(Context c) {
+        return c.getApplicationContext().getSharedPreferences("widget", Context.MODE_PRIVATE);
+    }
+
+    private static int period(Context c, int widgetId) {
+        return Math.floorMod(widgetPrefs(c).getInt("period_" + widgetId, TODAY), 3);
+    }
+
+    @Override
     public void onAppWidgetOptionsChanged(Context context, AppWidgetManager manager, int widgetId, Bundle options) {
         safeDraw(context, manager, widgetId);
     }
@@ -90,10 +126,11 @@ public class PortfolioWidget extends AppWidgetProvider {
 
     private static void draw(Context context, AppWidgetManager manager, int widgetId) {
         PortfolioCore.Summary s = PortfolioStore.summary(context);
-        Bitmap chart = s == null ? null : chartBitmap(PortfolioStore.history(context));
-        RemoteViews compact = compact(context, s);
-        RemoteViews medium = full(context, s, chart, R.layout.widget_medium, 1);
-        RemoteViews large = full(context, s, chart, R.layout.widget_large, 4);
+        int period = period(context, widgetId);
+        Bitmap chart = s == null ? null : chartBitmap(window(PortfolioStore.history(context), period));
+        RemoteViews compact = compact(context, s, widgetId, period);
+        RemoteViews medium = full(context, s, chart, R.layout.widget_medium, 1, widgetId, period);
+        RemoteViews large = full(context, s, chart, R.layout.widget_large, 4, widgetId, period);
         RemoteViews views;
         if (Build.VERSION.SDK_INT >= 31) {
             // The home screen picks the biggest layout that fits the widget's current size.
@@ -112,42 +149,40 @@ public class PortfolioWidget extends AppWidgetProvider {
 
     // ---- Layouts ----------------------------------------------------------------------
 
-    private static RemoteViews compact(Context context, PortfolioCore.Summary s) {
+    private static RemoteViews compact(Context context, PortfolioCore.Summary s, int widgetId, int period) {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_compact);
-        if (!start(context, v, s)) return v;
+        if (!start(context, v, s, widgetId)) return v;
         boolean hide = PortfolioStore.hideValues(context);
         if (s.holdings.size() == 1) {
             PortfolioCore.Holding h = s.holdings.get(0);
             v.setTextViewText(R.id.tile, h.shortTicker());
-            v.setTextViewText(R.id.title, (h.name.isEmpty() ? h.shortTicker() : h.name).toUpperCase(Locale.ROOT));
+            v.setTextViewText(R.id.title, (h.name.isEmpty() ? h.shortTicker() : h.name).toUpperCase(Locale.ROOT) + "  ·  " + PERIOD_TAGS[period]);
         } else {
             v.setTextViewText(R.id.tile, String.valueOf(s.holdings.size()));
-            v.setTextViewText(R.id.title, "PORTFOLIO");
+            v.setTextViewText(R.id.title, "PORTFOLIO  ·  " + PERIOD_TAGS[period]);
         }
         v.setTextViewText(R.id.amount, hide ? "$•••••" : money(s.value, false));
-        dayChip(v, s.dayPct);
+        chip(v, pctFor(s, period));
         return v;
     }
 
-    private static RemoteViews full(Context context, PortfolioCore.Summary s, Bitmap chart, int layout, int maxRows) {
+    private static RemoteViews full(Context context, PortfolioCore.Summary s, Bitmap chart, int layout, int maxRows, int widgetId, int period) {
         RemoteViews v = new RemoteViews(context.getPackageName(), layout);
-        if (!start(context, v, s)) return v;
+        if (!start(context, v, s, widgetId)) return v;
         boolean hide = PortfolioStore.hideValues(context);
 
-        int count = s.holdings.size();
-        v.setTextViewText(R.id.title, "PORTFOLIO  ·  " + count + (count == 1 ? " HOLDING" : " HOLDINGS"));
+        v.setTextViewText(R.id.title, "PORTFOLIO  ·  " + PERIOD_TAGS[period] + "   " + dots(period));
         long ms = PortfolioStore.fetchedMs(context);
         v.setTextViewText(R.id.updated, ms > 0 ? DateFormat.getTimeFormat(context).format(new Date(ms)) : "");
         v.setTextViewText(R.id.amount, hide ? "$•••••" : money(s.value, false));
-        dayChip(v, s.dayPct);
+        Double change = changeFor(s, period), pct = pctFor(s, period);
+        chip(v, pct);
 
-        SpannableStringBuilder gain = new SpannableStringBuilder();
-        if (s.gain != null) {
-            gain.append("Total gain  ");
-            colored(gain, hide ? pct(s.gainPct) : money(s.gain, true) + "  (" + pct(s.gainPct) + ")", s.gain);
-        } else if (s.dayChange != null && !hide) {
-            gain.append("Today  ");
-            colored(gain, money(s.dayChange, true), s.dayChange);
+        SpannableStringBuilder gain = new SpannableStringBuilder(PERIOD_NAMES[period] + "  ");
+        if (change == null) {
+            gain.append(period == MONTH ? "add a Month ago column to the Sheet" : period == ALL ? "add Avg cost to the Sheet" : "no previous close yet");
+        } else {
+            colored(gain, hide ? pct(pct) : money(change, true) + "  (" + pct(pct) + ")", change);
         }
         v.setTextViewText(R.id.gain, gain);
 
@@ -171,10 +206,9 @@ public class PortfolioWidget extends AppWidgetProvider {
                 String price = h.price == null ? "no price" : price(h.price);
                 v.setTextViewText(ids[3], hide ? price : units(h.units) + " × " + price);
                 v.setTextViewText(ids[4], h.price == null ? "—" : hide ? pct(h.gainPct) : money(h.value, false));
-                Double change = h.dayPct;
-                v.setTextViewText(ids[5], change == null ? (h.gainPct == null ? "" : pct(h.gainPct)) : arrow(change) + " " + pctAbs(change));
-                Double sign = change != null ? change : h.gainPct;
-                v.setTextColor(ids[5], sign == null ? MUTED : sign >= 0 ? GREEN : RED);
+                Double hp = period == TODAY ? h.dayPct : period == MONTH ? h.monthPct : h.gainPct;
+                v.setTextViewText(ids[5], hp == null ? "—" : arrow(hp) + " " + pctAbs(hp));
+                v.setTextColor(ids[5], hp == null || Math.abs(hp) < 0.00005 ? MUTED : hp > 0 ? GREEN : RED);
             }
         }
         for (int i = shown; i < maxRows; i++) v.setViewVisibility(ROWS[i][0], View.GONE);
@@ -182,17 +216,43 @@ public class PortfolioWidget extends AppWidgetProvider {
     }
 
     /** Shared setup. Returns false (showing the "open the app" message) if there's no data yet. */
-    private static boolean start(Context context, RemoteViews v, PortfolioCore.Summary s) {
+    private static boolean start(Context context, RemoteViews v, PortfolioCore.Summary s, int widgetId) {
         PendingIntent open = openAppIntent(context);
-        v.setOnClickPendingIntent(R.id.widget_root, open);
-        v.setOnClickPendingIntent(R.id.open_app, open);
         boolean ready = s != null && !s.holdings.isEmpty();
+        v.setOnClickPendingIntent(R.id.widget_root, ready ? nextPeriodIntent(context, widgetId) : open);
+        v.setOnClickPendingIntent(R.id.open_app, open);
         v.setViewVisibility(R.id.card_content, ready ? View.VISIBLE : View.GONE);
         v.setViewVisibility(R.id.widget_empty, ready ? View.GONE : View.VISIBLE);
         return ready;
     }
 
-    private static void dayChip(RemoteViews v, Double dayPct) {
+    private static Double changeFor(PortfolioCore.Summary s, int period) {
+        return period == TODAY ? s.dayChange : period == MONTH ? s.monthChange : s.gain;
+    }
+
+    private static Double pctFor(PortfolioCore.Summary s, int period) {
+        return period == TODAY ? s.dayPct : period == MONTH ? s.monthPct : s.gainPct;
+    }
+
+    private static String dots(int period) {
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < 3; i++) b.append(i == period ? "●" : "○").append(i < 2 ? " " : "");
+        return b.toString();
+    }
+
+    /** History points for the chart: last 24 hours, last 30 days, or everything. */
+    private static List<double[]> window(List<double[]> all, int period) {
+        if (period == ALL || all.isEmpty()) return all;
+        double from = System.currentTimeMillis() - (period == TODAY ? 24 : 30 * 24) * 3600_000.0;
+        List<double[]> out = new ArrayList<>();
+        for (int i = 0; i < all.size(); i++) {
+            // Include the last point before the window so the line starts at the window's edge.
+            if (all.get(i)[0] >= from || (i + 1 < all.size() && all.get(i + 1)[0] >= from)) out.add(all.get(i));
+        }
+        return out;
+    }
+
+    private static void chip(RemoteViews v, Double dayPct) {
         if (dayPct == null) {
             v.setViewVisibility(R.id.day_chip, View.GONE);
             return;
@@ -307,6 +367,13 @@ public class PortfolioWidget extends AppWidgetProvider {
 
     static String arrow(double p) {
         return Math.abs(p) < 0.00005 ? "•" : p > 0 ? "▲" : "▼";
+    }
+
+    private static PendingIntent nextPeriodIntent(Context context, int widgetId) {
+        Intent intent = new Intent(context, PortfolioWidget.class)
+            .setAction(ACTION_NEXT_PERIOD)
+            .putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        return PendingIntent.getBroadcast(context, widgetId, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }
 
     private static PendingIntent openAppIntent(Context context) {

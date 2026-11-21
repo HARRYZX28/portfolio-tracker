@@ -92,7 +92,7 @@
       <div class="card hero">
         <div class="label">Total value</div>
         <div class="hero-value num">${amt(s.value)}</div>
-        <div class="hero-sub">${s.holdings.length} holding${s.holdings.length === 1 ? "" : "s"}${s.cost !== null && !hidden() ? " · " + money(s.cost) + " invested" : ""}</div>
+        <div class="hero-sub">${s.holdings.length} holding${s.holdings.length === 1 ? "" : "s"}${s.cost !== null && !hidden() ? " · " + money(s.cost) + " invested" : ""}${s.monthPct !== undefined && s.monthPct !== null ? ` · 1 month <span class="${tone(s.monthPct)}">${pct(s.monthPct)}</span>` : ""}</div>
       </div>
 
       <div class="stats">
@@ -162,6 +162,7 @@
           <div><span class="label">Total gain</span><span class="${tone(h.gain)}">${h.gain === null ? "—" : (hidden() ? "" : money(h.gain, true) + " ") + "(" + pct(h.gainPct) + ")"}</span></div>
           <div><span class="label">Avg cost</span>${h.avgCost === null ? "—" : price(h.avgCost)}</div>
           <div><span class="label">Invested</span>${h.cost === null ? "—" : amt(h.cost)}</div>
+          <div><span class="label">1 month</span><span class="${tone(h.monthPct)}">${h.monthPct === undefined || h.monthPct === null ? "—" : (hidden() ? "" : money(h.monthChange, true) + " ") + "(" + pct(h.monthPct) + ")"}</span></div>
           <div><span class="label">Prev close</span>${h.prevClose === null ? "—" : price(h.prevClose)}</div>
           <div><span class="label">Share of portfolio</span>${(h.weight * 100).toFixed(1)}%</div>
         </div>
