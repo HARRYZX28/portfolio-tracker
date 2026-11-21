@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- One row high (e.g. 4x1 in a stack): card name left, amount right, dots, ↗ to open the app.
-     Tap anywhere else for the next card. Same glass background as the taller layout. -->
+<!-- Compact (1 row high): name of the portfolio or holding, total value and today's change. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
@@ -13,42 +12,71 @@
         android:layout_height="match_parent"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingStart="18dp"
+        android:paddingStart="12dp"
         android:paddingEnd="6dp">
 
         <TextView
-            android:id="@+id/card_label"
+            android:id="@+id/tile"
+            android:layout_width="38dp"
+            android:layout_height="28dp"
+            android:background="@drawable/tile_bg"
+            android:fontFamily="sans-serif-medium"
+            android:gravity="center"
+            android:maxLines="1"
+            android:textColor="#2EE6A6"
+            android:textSize="9sp" />
+
+        <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:ellipsize="end"
-            android:letterSpacing="0.06"
-            android:maxLines="1"
-            android:textColor="#B5C0C0"
-            android:textSize="12sp" />
-
-        <TextView
-            android:id="@+id/card_amount"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:maxLines="1"
-            android:textSize="22sp" />
-
-        <TextView
-            android:id="@+id/card_dots"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:letterSpacing="0.08"
+                android:maxLines="1"
+                android:text="PORTFOLIO"
+                android:textColor="#96A1A1"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/amount"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:text="—"
+                android:textColor="#EFF7F7"
+                android:textSize="20sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/day_chip"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/chip_flat"
+            android:fontFamily="sans-serif-medium"
+            android:maxLines="1"
+            android:paddingStart="7dp"
+            android:paddingTop="2dp"
+            android:paddingEnd="7dp"
+            android:paddingBottom="2dp"
             android:textColor="#96A1A1"
-            android:textSize="7sp" />
+            android:textSize="11sp" />
 
         <ImageView
             android:id="@+id/open_app"
-            android:layout_width="36dp"
-            android:layout_height="36dp"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
             android:contentDescription="@string/widget_open_app"
-            android:padding="10dp"
+            android:padding="9dp"
             android:src="@drawable/ic_widget_open" />
     </LinearLayout>
 
@@ -57,8 +85,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:gravity="center"
-        android:paddingStart="12dp"
-        android:paddingEnd="12dp"
+        android:padding="12dp"
         android:text="@string/widget_empty"
         android:textColor="#96A1A1"
         android:textSize="12sp"

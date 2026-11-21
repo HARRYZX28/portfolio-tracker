@@ -43,7 +43,7 @@ final class PortfolioStore {
             .putString(KEY_URL, url == null ? "" : url.trim())
             .putBoolean(KEY_WIDGET_HOLDINGS, widgetHoldings)
             .putBoolean(KEY_HIDE, hideValues);
-        if (!old.equals(url == null ? "" : url.trim())) e.remove(KEY_CSV).remove(KEY_FETCHED).remove(KEY_ERROR);
+        if (!old.equals(url == null ? "" : url.trim())) e.remove(KEY_CSV).remove(KEY_FETCHED).remove(KEY_ERROR).remove(KEY_HISTORY);
         e.apply();
     }
 
@@ -71,12 +71,14 @@ final class PortfolioStore {
         String error;
         try {
             String csv = download(url);
-            PortfolioCore.fromCsv(csv); // check it's the Holdings tab before saving it
+            PortfolioCore.Summary s = PortfolioCore.fromCsv(csv); // check it's the Holdings tab before saving it
+            long now = System.currentTimeMillis();
             prefs(c).edit()
                 .putString(KEY_CSV, csv)
-                .putLong(KEY_FETCHED, System.currentTimeMillis())
+                .putLong(KEY_FETCHED, now)
                 .remove(KEY_ERROR)
                 .apply();
+            recordHistory(c, s, now);
             return null;
         } catch (PortfolioCore.FormatException e) {
             error = e.getMessage();
@@ -127,6 +129,52 @@ final class PortfolioStore {
             return new String(out.toByteArray(), StandardCharsets.UTF_8);
         }
     }
+
+    // ---- Value history (for the widget chart) -------------------------------------------
+    // Saved on the phone as "time:value;time:value;…". One point per 20 minutes at most,
+    // kept for 90 days. The chart builds up as the app and widget refresh.
+
+    private static final String KEY_HISTORY = "history";
+    private static final long MIN_GAP_MS = 20 * 60 * 1000L;
+    private static final long KEEP_MS = 90L * 24 * 60 * 60 * 1000;
+
+    private static void recordHistory(Context c, PortfolioCore.Summary s, long now) {
+        if (s.value <= 0 || s.missingPrices > 0) return;
+        java.util.List<double[]> points = history(c);
+        if (points.isEmpty() && s.dayChange != null) {
+            // First ever point: start the chart from yesterday's close so there's a line straight away.
+            points.add(new double[] { now - 24 * 60 * 60 * 1000.0, s.value - s.dayChange });
+        }
+        if (!points.isEmpty()) {
+            double[] last = points.get(points.size() - 1);
+            if (now - last[0] < MIN_GAP_MS) points.remove(points.size() - 1); // replace, don't crowd
+        }
+        points.add(new double[] { now, s.value });
+        StringBuilder out = new StringBuilder();
+        for (double[] p : points) {
+            if (now - p[0] > KEEP_MS) continue;
+            if (out.length() > 0) out.append(';');
+            out.append((long) p[0]).append(':').append(Math.round(p[1] * 100) / 100.0);
+        }
+        prefs(c).edit().putString(KEY_HISTORY, out.toString()).apply();
+    }
+
+    /** Oldest first: each point is {timeMs, value}. */
+    static java.util.List<double[]> history(Context c) {
+        java.util.List<double[]> points = new java.util.ArrayList<>();
+        String raw = prefs(c).getString(KEY_HISTORY, "");
+        if (raw.isEmpty()) return points;
+        for (String part : raw.split(";")) {
+            int colon = part.indexOf(':');
+            if (colon <= 0) continue;
+            try {
+                points.add(new double[] { Long.parseLong(part.substring(0, colon)), Double.parseDouble(part.substring(colon + 1)) });
+            } catch (NumberFormatException ignored) { }
+        }
+        return points;
+    }
+
+    static void clearHistory(Context c) { prefs(c).edit().remove(KEY_HISTORY).apply(); }
 
     // ---- For the app screen -----------------------------------------------------------
 

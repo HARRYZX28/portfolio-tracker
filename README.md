@@ -11,7 +11,9 @@ Harry's Android portfolio tracker with a home-screen widget, in the same style a
 - The app does the maths (`PortfolioCore.java`): value, today's change, total gain, allocation.
   The widget uses the same code, so the two always agree.
 - The widget refreshes about every 30 minutes (Android's minimum) and whenever the app is open.
-  Tap it to cycle cards: Portfolio, Today, Total gain, then each holding. Tap ↗ to open the app.
+  Its layout follows its size: 1 row shows the total and today's change; 2 rows add total gain,
+  a value chart and the top holding; 3+ rows show up to 4 holdings. Tap it to open the app.
+  The chart builds up on the phone from each refresh (kept for 90 days).
 
 ## Changing holdings
 
