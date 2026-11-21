@@ -30,6 +30,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      # Home-screen widgets only allow certain view types; anything else shows "Can't load widget".
+      - name: Check widget layouts
+        run: python3 scripts/check_widget_layouts.py android/app/src/main/res/layout
+
       - name: Work out version
         id: version
         run: |
